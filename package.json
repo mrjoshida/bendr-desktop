@@ -1,0 +1,18 @@
+{
+  "name": "bendr-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Desktop wrapper for BENDR — circuit-bent video processor with WiFi MIDI, OSC, Syphon, and NDI capabilities",
+  "scripts": {
+    "build:frontend": "node build.js",
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2"
+  }
+}

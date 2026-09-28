@@ -1,0 +1,3 @@
+[submodule "bendr"]
+	path = bendr
+	url = https://github.com/mrjoshida/bendr.git
