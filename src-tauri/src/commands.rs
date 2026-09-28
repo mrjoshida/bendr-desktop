@@ -6,6 +6,7 @@
 use tauri::State;
 use tokio::sync::Mutex;
 use crate::midi::MidiService;
+use crate::display;
 
 /// Scans for available MIDI input ports (both hardware USB and network endpoints).
 ///
@@ -40,7 +41,7 @@ pub async fn midi_disconnect(
     svc.disconnect()
 }
 
-/// Information describing an attached display monitor.
+/// Information describing an attached display monitor (legacy / placeholder).
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct DisplayInfo {
     pub id: String,
@@ -50,7 +51,7 @@ pub struct DisplayInfo {
     pub is_primary: bool,
 }
 
-/// Retrieves available display information for multi-display / fullscreen output.
+/// Retrieves available display information for multi-display / fullscreen output (legacy endpoint).
 #[tauri::command]
 pub async fn get_displays() -> Result<Vec<DisplayInfo>, String> {
     // Placeholder for Phase 1/2 multi-monitor output routing
@@ -61,4 +62,28 @@ pub async fn get_displays() -> Result<Vec<DisplayInfo>, String> {
         height: 900,
         is_primary: true,
     }])
+}
+
+/// List all connected displays with their properties.
+#[tauri::command]
+pub async fn list_displays(app: tauri::AppHandle) -> Result<Vec<display::DisplayInfo>, String> {
+    display::list_displays(&app)
+}
+
+/// Create output window on a specific display.
+#[tauri::command]
+pub async fn create_output_window(app: tauri::AppHandle, display_index: usize) -> Result<(), String> {
+    display::create_output_window(&app, display_index)
+}
+
+/// Close the output window.
+#[tauri::command]
+pub async fn close_output_window(app: tauri::AppHandle) -> Result<(), String> {
+    display::close_output_window(&app)
+}
+
+/// Check if output window is currently open.
+#[tauri::command]
+pub async fn is_output_open() -> bool {
+    display::is_output_open()
 }

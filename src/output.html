@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BENDR Output</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #000;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+    video {
+      width: 100vw;
+      height: 100vh;
+      object-fit: contain;
+      cursor: none;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <video id="outputVideo" autoplay playsinline muted></video>
+
+  <script>
+    // ── Tauri IPC & Event Setup ─────────────────────────────
+    const tauri = window.__TAURI_INTERNALS__ || {};
+    const invoke = tauri.invoke ? tauri.invoke.bind(tauri) : (() => Promise.resolve());
+
+    // Provide safe wrappers/fallbacks for emit and listen
+    if (!tauri.emit) {
+      tauri.emit = (event, payload) => invoke('plugin:event|emit', { event, payload });
+    }
+    if (!tauri.listen && tauri.transformCallback) {
+      tauri.listen = (event, handler) => invoke('plugin:event|listen', {
+        event,
+        target: { kind: 'Any' },
+        handler: tauri.transformCallback(handler)
+      });
+    }
+
+    const emit = (event, payload) => {
+      if (tauri.emit) return tauri.emit(event, payload);
+      return invoke('plugin:event|emit', { event, payload });
+    };
+
+    const listen = (event, handler) => {
+      if (tauri.listen) return tauri.listen(event, handler);
+      if (tauri.transformCallback) {
+        return invoke('plugin:event|listen', {
+          event,
+          target: { kind: 'Any' },
+          handler: tauri.transformCallback(handler)
+        });
+      }
+      return Promise.resolve(() => {});
+    };
+
+    // ── Elements & State ────────────────────────────────────
+    const video = document.getElementById('outputVideo');
+    let pc = null;
+    let rafId = null;
+    const pendingCandidates = [];
+
+    // ── Render Loop Drive ───────────────────────────────────
+    // Sends request-tick to main window on each rAF to keep
+    // the main render pipeline active when throttled or backgrounded.
+    function startRenderDrive() {
+      if (rafId !== null) return;
+      function tick() {
+        try {
+          emit('output:request-tick', {});
+        } catch (e) {
+          // Ignore transient emit errors
+        }
+        rafId = requestAnimationFrame(tick);
+      }
+      rafId = requestAnimationFrame(tick);
+      console.log('[BENDR Output] Render drive loop started');
+    }
+
+    function stopRenderDrive() {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+        console.log('[BENDR Output] Render drive loop stopped');
+      }
+    }
+
+    // ── Teardown & Window Close ─────────────────────────────
+    function cleanup() {
+      stopRenderDrive();
+      if (pc) {
+        pc.close();
+        pc = null;
+      }
+      if (video.srcObject) {
+        video.srcObject = null;
+      }
+    }
+
+    async function closeSelf() {
+      cleanup();
+      try {
+        await invoke('close_output_window');
+      } catch (e) {
+        window.close();
+      }
+    }
+
+    // ── WebRTC Receiver ─────────────────────────────────────
+    function initWebRTC() {
+      pc = new RTCPeerConnection({ iceServers: [] });
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          emit('output:ice-candidate-reply', {
+            candidate: event.candidate.candidate,
+            sdpMid: event.candidate.sdpMid,
+            sdpMLineIndex: event.candidate.sdpMLineIndex,
+          });
+        }
+      };
+
+      pc.ontrack = (event) => {
+        console.log('[BENDR Output] Remote track received:', event.track.kind);
+        if (event.streams && event.streams[0]) {
+          video.srcObject = event.streams[0];
+        } else {
+          video.srcObject = new MediaStream([event.track]);
+        }
+        video.play().catch(e => console.warn('[BENDR Output] Autoplay warning:', e));
+      };
+    }
+
+    // Start render drive as soon as video starts playback
+    video.addEventListener('playing', () => {
+      startRenderDrive();
+    });
+
+    // ── Tauri Event Handling ────────────────────────────────
+    if (listen) {
+      // 1. Receive WebRTC offer from main window
+      listen('output:webrtc-offer', async (event) => {
+        try {
+          console.log('[BENDR Output] Received WebRTC offer');
+          if (!pc) initWebRTC();
+
+          await pc.setRemoteDescription(new RTCSessionDescription(event.payload));
+
+          // Drain any ICE candidates received before remote description was set
+          while (pendingCandidates.length > 0) {
+            const cand = pendingCandidates.shift();
+            await pc.addIceCandidate(new RTCIceCandidate(cand));
+          }
+
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+
+          emit('output:webrtc-answer', {
+            sdp: pc.localDescription.sdp,
+            type: pc.localDescription.type,
+          });
+          console.log('[BENDR Output] WebRTC answer emitted to main window');
+        } catch (e) {
+          console.error('[BENDR Output] Failed to process offer:', e);
+        }
+      });
+
+      // 2. Receive ICE candidate from main window
+      listen('output:ice-candidate', async (event) => {
+        try {
+          if (pc && pc.remoteDescription && pc.remoteDescription.type) {
+            await pc.addIceCandidate(new RTCIceCandidate(event.payload));
+          } else {
+            pendingCandidates.push(event.payload);
+          }
+        } catch (e) {
+          console.error('[BENDR Output] Failed to add ICE candidate:', e);
+        }
+      });
+
+      // 3. Receive close signal from backend/main window
+      listen('output:close', () => {
+        console.log('[BENDR Output] Received output:close event');
+        cleanup();
+      });
+    }
+
+    // ── UI Controls: Fullscreen & Keyboard Shortcuts ───────
+    video.addEventListener('dblclick', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'q' || e.key === 'Q') {
+        closeSelf();
+      } else if (e.key === 'Escape') {
+        if (document.fullscreenElement) {
+          document.exitFullscreen().catch(() => {});
+        }
+      }
+    });
+  </script>
+</body>
+</html>

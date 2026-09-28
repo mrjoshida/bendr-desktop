@@ -1,4 +1,5 @@
 pub mod commands;
+pub mod display;
 pub mod midi;
 pub mod ndi;
 pub mod osc;
@@ -17,6 +18,10 @@ pub fn run() {
             commands::midi_connect,
             commands::midi_disconnect,
             commands::get_displays,
+            commands::list_displays,
+            commands::create_output_window,
+            commands::close_output_window,
+            commands::is_output_open,
         ])
         .setup(|app| {
             let app_handle = app.handle().clone();

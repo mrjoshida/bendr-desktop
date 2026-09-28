@@ -6,6 +6,7 @@
  * Injects the Tauri desktop bridge (`src/bridge.js`) and UI extensions
  * (`src/desktop-ui.js`) into the core BENDR single-file application (`bendr/index.html`),
  * outputting the unified app to `dist/index.html`.
+ * Also copies auxiliary frontend assets (like `src/output.html`) to `dist/`.
  */
 
 const fs = require('fs');
@@ -89,6 +90,16 @@ function build() {
   const outSizeKb = (Buffer.byteLength(combinedHtml, 'utf-8') / 1024).toFixed(1);
   console.log(`[build] Written to ${path.relative(ROOT_DIR, OUTPUT_HTML_PATH)}`);
   console.log(`[build] Source size: ${inSizeKb} KB -> Output size: ${outSizeKb} KB`);
+
+  // 9. Copy output.html for the multi-display output window
+  const outputSrc = path.join(ROOT_DIR, 'src', 'output.html');
+  if (fs.existsSync(outputSrc)) {
+    fs.copyFileSync(outputSrc, path.join(DIST_DIR, 'output.html'));
+    console.log('[build] Copied output.html to dist/');
+  } else {
+    console.warn(`[build] Warning: ${path.relative(ROOT_DIR, outputSrc)} not found, omitting.`);
+  }
+
   console.log('[build] Build completed successfully.');
 }
 
