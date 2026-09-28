@@ -11,8 +11,6 @@ use tauri::{AppHandle, Emitter};
 /// Payload emitted with the `midi:message` event.
 #[derive(Debug, Clone, Serialize)]
 pub struct MidiMessagePayload {
-    /// MIDI channel (0-15) derived from lower 4 bits of the status byte.
-    pub channel: u8,
     /// Raw status byte (e.g. 0x90 for Note On, 0xB0 for CC).
     pub status: u8,
     /// First data byte (note number, controller index, etc.).
@@ -122,12 +120,10 @@ impl MidiService {
                         return;
                     }
                     let status = message[0];
-                    let channel = status & 0x0F;
                     let data1 = message.get(1).copied().unwrap_or(0);
                     let data2 = message.get(2).copied().unwrap_or(0);
 
                     let payload = MidiMessagePayload {
-                        channel,
                         status,
                         data1,
                         data2,

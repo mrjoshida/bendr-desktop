@@ -5,9 +5,8 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
-    "event:default",
-    "window:default",
-    "window:allow-create",
-    "window:allow-set-fullscreen"
+    "core:window:default",
+    "core:window:allow-create",
+    "core:window:allow-set-fullscreen"
   ]
 }
