@@ -87,3 +87,22 @@ pub async fn close_output_window(app: tauri::AppHandle) -> Result<(), String> {
 pub async fn is_output_open() -> bool {
     display::is_output_open()
 }
+
+/// Enable or disable the Syphon/Spout publisher
+#[tauri::command]
+pub fn toggle_publisher(state: tauri::State<'_, crate::syphon::PublisherState>, active: bool) {
+    if let Ok(mut pub_state) = state.0.lock() {
+        pub_state.active = active;
+        log::info!("[BENDR Publisher] Active: {}", active);
+    }
+}
+
+/// Receive a raw RGBA frame from JS and publish it
+#[tauri::command]
+pub fn publish_frame(state: tauri::State<'_, crate::syphon::PublisherState>, width: u32, height: u32, pixels: Vec<u8>) {
+    if let Ok(mut pub_state) = state.0.lock() {
+        if pub_state.active {
+            pub_state.publish_frame(width, height, &pixels);
+        }
+    }
+}

@@ -12,6 +12,7 @@ pub fn run() {
     let _ = env_logger::try_init();
 
     tauri::Builder::default()
+        .manage(syphon::PublisherState(std::sync::Mutex::new(syphon::FramePublisher::new())))
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
             commands::midi_scan_ports,
@@ -22,6 +23,8 @@ pub fn run() {
             commands::create_output_window,
             commands::close_output_window,
             commands::is_output_open,
+            commands::toggle_publisher,
+            commands::publish_frame,
         ])
         .setup(|app| {
             let app_handle = app.handle().clone();

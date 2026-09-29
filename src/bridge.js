@@ -292,3 +292,71 @@ if (window.__TAURI_INTERNALS__) {
 
   console.log('[BENDR Desktop] Bridge ready');
 }
+
+// ── Syphon & Spout Publisher Bridge ──────────────────────
+// Transmits the WebGL frame to Rust for native sharing.
+
+BendrDesktop.publisher = {
+  _active: false,
+  _canvas: null,
+  _ctx: null,
+
+  async toggle(active) {
+    this._active = active;
+    try {
+      await invoke('toggle_publisher', { active });
+      if (active) this._startCapture();
+    } catch (e) {
+      console.error('[BENDR Desktop] Failed to toggle publisher:', e);
+    }
+  },
+
+  _startCapture() {
+    if (!this._active) return;
+    
+    // Attempt to grab pixels.
+    // In bendr, the main output is rendered to the global `canvas`.
+    // However, gl.preserveDrawingBuffer is false. 
+    // We can hook into window.__tick or grab after renderFrame.
+    // To do this reliably, we can create a secondary canvas that
+    // captures the stream and copies frames.
+    
+    if (!this._canvas) {
+      this._canvas = document.createElement('canvas');
+      this._ctx = this._canvas.getContext('2d', { willReadFrequently: true });
+      this._video = document.createElement('video');
+      this._video.autoplay = true;
+      this._video.muted = true;
+      this._video.srcObject = window.__getOutputStream();
+    }
+
+    const captureLoop = async () => {
+      if (!this._active) return;
+      
+      if (this._video.videoWidth > 0 && this._video.videoHeight > 0) {
+        if (this._canvas.width !== this._video.videoWidth) {
+          this._canvas.width = this._video.videoWidth;
+          this._canvas.height = this._video.videoHeight;
+        }
+        this._ctx.drawImage(this._video, 0, 0);
+        const imgData = this._ctx.getImageData(0, 0, this._canvas.width, this._canvas.height);
+        
+        try {
+          // Send pixel buffer over IPC
+          await invoke('publish_frame', {
+            width: this._canvas.width,
+            height: this._canvas.height,
+            pixels: Array.from(imgData.data) // Convert Uint8ClampedArray to Array for IPC
+          });
+        } catch (e) {
+          console.error('[BENDR Publisher IPC Error]', e);
+        }
+      }
+      
+      // Throttle to roughly 30-60fps
+      requestAnimationFrame(captureLoop);
+    };
+    
+    requestAnimationFrame(captureLoop);
+  }
+};

@@ -33,3 +33,9 @@ mdns-sd = "0.11"
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
+
+[target.x86_64-apple-darwin.dependencies]
+syphon-rs = "0.2.0"
+
+[target.x86_64-pc-windows-msvc.dependencies]
+spout2-rs = "0.1.1"
