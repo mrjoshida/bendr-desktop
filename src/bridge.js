@@ -346,7 +346,7 @@ BendrDesktop.publisher = {
           await invoke('publish_frame', {
             width: this._canvas.width,
             height: this._canvas.height,
-            pixels: Array.from(imgData.data) // Convert Uint8ClampedArray to Array for IPC
+            pixels: new Uint8Array(imgData.data.buffer) // Fast zero-copy IPC array transfer
           });
         } catch (e) {
           console.error('[BENDR Publisher IPC Error]', e);
