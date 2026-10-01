@@ -180,10 +180,13 @@ dependencies = [
  "log",
  "mdns-sd",
  "midir",
+ "objc2",
+ "objc2-metal",
  "serde",
  "serde_json",
  "spout2-rs",
- "syphon-rs",
+ "syphon-core",
+ "syphon-metal",
  "tauri",
  "tauri-build",
  "tauri-plugin-shell",
@@ -219,6 +222,12 @@ checksum = "3ded4057c258ba199e2d26386d3af3780957ecaee6c4ef4041c6b4b8b97c0b06"
 dependencies = [
  "serde_core",
 ]
+
+[[package]]
+name = "block"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0d8c1fef690941d3e7788d328517591fecc684c084084702d6ff1641e993699a"
 
 [[package]]
 name = "block-buffer"
@@ -407,6 +416,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4e7648175b45a9a48536d676f68d918270699102aa8dab5496df06904c914600"
 
 [[package]]
+name = "cgl"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ced0551234e87afee12411d535648dd89d2e7f34c78b753395567aff3d447ff"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "chrono"
 version = "0.4.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -416,6 +434,35 @@ dependencies = [
  "num-traits",
  "serde",
  "windows-link",
+]
+
+[[package]]
+name = "cocoa"
+version = "0.26.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ad36507aeb7e16159dfe68db81ccc27571c3ccd4b76fb2fb72fc59e7a4b1b64c"
+dependencies = [
+ "bitflags 2.13.2",
+ "block",
+ "cocoa-foundation",
+ "core-foundation",
+ "core-graphics 0.24.0",
+ "foreign-types",
+ "libc",
+ "objc",
+]
+
+[[package]]
+name = "cocoa-foundation"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "81411967c50ee9a1fc11365f8c585f863a22a9697c89239c452292c40ba79b0d"
+dependencies = [
+ "bitflags 2.13.2",
+ "block",
+ "core-foundation",
+ "core-graphics-types",
+ "objc",
 ]
 
 [[package]]
@@ -468,6 +515,19 @@ name = "core-foundation-sys"
 version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b"
+
+[[package]]
+name = "core-graphics"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fa95a34622365fa5bbf40b20b75dba8dfa8c94c734aea8ac9a5ca38af14316f1"
+dependencies = [
+ "bitflags 2.13.2",
+ "core-foundation",
+ "core-graphics-types",
+ "foreign-types",
+ "libc",
+]
 
 [[package]]
 name = "core-graphics"
@@ -1672,6 +1732,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "io-surface"
+version = "0.16.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "554b8c5d64ec09a3a520fe58e4d48a73e00ff32899cdcbe32a4877afd4968b8e"
+dependencies = [
+ "cgl",
+ "core-foundation",
+ "core-foundation-sys",
+ "leaky-cow",
+]
+
+[[package]]
 name = "ipnet"
 version = "2.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1873,6 +1945,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "leak"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bd100e01f1154f2908dfa7d02219aeab25d0b9c7fa955164192e3245255a0c73"
+
+[[package]]
+name = "leaky-cow"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "40a8225d44241fd324a8af2806ba635fc7c8a7e9a7de4d5cf3ef54e71f5926fc"
+dependencies = [
+ "leak",
+]
+
+[[package]]
 name = "libappindicator"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1950,6 +2037,15 @@ name = "log"
 version = "0.4.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
+
+[[package]]
+name = "malloc_buf"
+version = "0.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "62bb907fe88d54d8d9ce32a3cceab4218ed2f6b7d35617cafe9adf84e43919cb"
+dependencies = [
+ "libc",
+]
 
 [[package]]
 name = "markup5ever"
@@ -2145,6 +2241,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "objc"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "915b1b472bc21c53464d6c8461c9d3af805ba1ef837e1cac254428f4a77177b1"
+dependencies = [
+ "malloc_buf",
+]
+
+[[package]]
+name = "objc-foundation"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1add1b659e36c9607c7aab864a76c7a4c2760cd0cd2e120f3fb8b952c7e22bf9"
+dependencies = [
+ "block",
+ "objc",
+ "objc_id",
+]
+
+[[package]]
 name = "objc2"
 version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2196,7 +2312,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2a180dd8642fa45cdb7dd721cd4c11b1cadd4929ce112ebd8b9f5803cc79d536"
 dependencies = [
  "bitflags 2.13.2",
+ "block2",
  "dispatch2",
+ "libc",
  "objc2",
 ]
 
@@ -2268,7 +2386,6 @@ checksum = "e3e0adef53c21f888deb4fa59fc59f7eb17404926ee8a6f59f5df0fd7f9f3272"
 dependencies = [
  "bitflags 2.13.2",
  "block2",
- "libc",
  "objc2",
  "objc2-core-foundation",
 ]
@@ -2280,8 +2397,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "180788110936d59bab6bd83b6060ffdfffb3b922ba1396b312ae795e1de9d81d"
 dependencies = [
  "bitflags 2.13.2",
+ "libc",
  "objc2",
  "objc2-core-foundation",
+ "objc2-foundation",
 ]
 
 [[package]]
@@ -2296,6 +2415,7 @@ dependencies = [
  "objc2",
  "objc2-core-foundation",
  "objc2-foundation",
+ "objc2-io-surface",
 ]
 
 [[package]]
@@ -2353,6 +2473,15 @@ dependencies = [
  "objc2-app-kit",
  "objc2-core-foundation",
  "objc2-foundation",
+]
+
+[[package]]
+name = "objc_id"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c92d4ddb4bd7b50d730c215ff871754d0da6b2178849f8a2a2ab69712d0c073b"
+dependencies = [
+ "objc",
 ]
 
 [[package]]
@@ -3363,15 +3492,38 @@ dependencies = [
 ]
 
 [[package]]
-name = "syphon-rs"
-version = "0.2.0"
+name = "syphon-core"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24a759fee0276b278a4ae5d14f832d4f82b6da96792aa9a311f41ad763797de7"
+checksum = "78b0122e1841fe3008799798020b1ab57fe35bb915fee91197d94df1244a7c0b"
 dependencies = [
- "block2",
+ "block",
+ "cocoa",
+ "core-foundation",
+ "core-graphics 0.25.0",
+ "io-surface",
+ "libc",
+ "log",
+ "objc",
+ "objc-foundation",
  "objc2",
- "objc2-foundation",
+ "objc2-io-surface",
+ "objc_id",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "syphon-metal"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d26498636413a6281b2c8cbda195a75f2e1df97b1159a88a79cc7ddd2ff8ed41"
+dependencies = [
+ "log",
+ "objc2",
+ "objc2-core-foundation",
+ "objc2-io-surface",
  "objc2-metal",
+ "syphon-core",
 ]
 
 [[package]]
@@ -3396,7 +3548,7 @@ dependencies = [
  "bitflags 2.13.2",
  "block2",
  "core-foundation",
- "core-graphics",
+ "core-graphics 0.25.0",
  "crossbeam-channel",
  "dbus",
  "dispatch2",
