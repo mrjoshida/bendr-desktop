@@ -260,26 +260,60 @@ if (window.__TAURI_INTERNALS__) {
     listen('midi:message', (event) => {
       const { status, data1, data2 } = event.payload;
       
-      // Create a synthetic MIDIMessageEvent-like object
-      // matching what bendr's onMidi() expects:
-      //   e.data[0] = status byte
-      //   e.data[1] = data1 (note/CC number)
-      //   e.data[2] = data2 (velocity/CC value)
-      //   e.timeStamp = DOMHighResTimeStamp (required for clock EMA)
       const syntheticEvent = {
         data: new Uint8Array([status, data1, data2]),
         timeStamp: performance.now()
       };
       
-      // Call bendr's global MIDI handler directly.
-      // onMidi() is a top-level function in p3_mod_ui.js,
-      // bound to window scope via the concatenated script block.
       if (typeof window.onMidi === 'function') {
         window.onMidi(syntheticEvent);
       }
     });
+
+    // ── OSC Event Listener ─────────────────────────────────
+    // Bridged from the Rust UDP server.
+    // Translates specific OSC paths directly into MIDI events,
+    // allowing users to use bendr's native MIDI Learn with OSC.
+    listen('osc:message', (event) => {
+      const { path, args } = event.payload;
+      if (!args || args.length === 0) return;
+
+      // Extract numeric value (Float or Int)
+      const rawVal = args[0];
+      let val = 0;
+      if (typeof rawVal === 'number') {
+        val = rawVal;
+      } else if (rawVal && typeof rawVal === 'object' && rawVal.Float !== undefined) {
+        val = rawVal.Float;
+      } else if (rawVal && typeof rawVal === 'object' && rawVal.Int !== undefined) {
+        val = rawVal.Int;
+      }
+
+      // 1. /bendr/cc/<number> (val: 0.0 - 1.0) -> mapped to CC (0xB0)
+      const ccMatch = path.match(/^\/bendr\/cc\/(\d+)$/);
+      if (ccMatch) {
+        const ccNum = parseInt(ccMatch[1], 10) & 0x7F;
+        const ccVal = Math.max(0, Math.min(127, Math.round(val * 127)));
+        if (typeof window.onMidi === 'function') {
+          window.onMidi({ data: new Uint8Array([0xB0, ccNum, ccVal]), timeStamp: performance.now() });
+        }
+        return;
+      }
+
+      // 2. /bendr/note/<number> (val: 0.0 - 1.0) -> mapped to Note On/Off
+      const noteMatch = path.match(/^\/bendr\/note\/(\d+)$/);
+      if (noteMatch) {
+        const noteNum = parseInt(noteMatch[1], 10) & 0x7F;
+        const vel = Math.max(0, Math.min(127, Math.round(val * 127)));
+        const status = vel > 0 ? 0x90 : 0x80;
+        if (typeof window.onMidi === 'function') {
+          window.onMidi({ data: new Uint8Array([status, noteNum, vel]), timeStamp: performance.now() });
+        }
+        return;
+      }
+    });
     
-    console.log('[BENDR Desktop] MIDI event bridge active');
+    console.log('[BENDR Desktop] MIDI & OSC event bridges active');
   }
 
   // ── Auto-scan on startup ───────────────────────────────

@@ -36,11 +36,14 @@ pub fn run() {
             // Register MIDI service in managed state for command handlers
             app.manage(tokio::sync::Mutex::new(midi_service));
 
-            // Spawn background task for MIDI monitoring / network discovery
-            tauri::async_runtime::spawn(async move {
-                log::info!("[BENDR] MIDI background task spawned");
-                // Phase 1b: Background mDNS / Bonjour network MIDI service discovery
-            });
+            // Initialize OSC service
+            match osc::init(app_handle.clone()) {
+                Ok(osc_service) => {
+                    // Register OSC service in managed state so it isn't dropped
+                    app.manage(osc_service);
+                }
+                Err(e) => log::error!("[BENDR] OSC Init failed: {e}"),
+            }
 
             log::info!("[BENDR] Setup complete");
             Ok(())
