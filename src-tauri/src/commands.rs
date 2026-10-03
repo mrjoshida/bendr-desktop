@@ -88,24 +88,43 @@ pub async fn is_output_open() -> bool {
     display::is_output_open()
 }
 
-/// Enable or disable the Syphon/Spout publisher
+/// Enable or disable the Syphon/Spout and NDI publishers
 #[tauri::command]
-pub fn toggle_publisher(state: tauri::State<'_, crate::syphon::PublisherState>, active: bool) -> Result<(), String> {
-    let mut pub_state = state.0.lock().unwrap();
-    pub_state.active = active;
+pub fn toggle_publisher(
+    syphon_state: tauri::State<'_, crate::syphon::PublisherState>,
+    ndi_state: tauri::State<'_, crate::ndi::NdiState>,
+    active: bool,
+) -> Result<(), String> {
+    if let Ok(mut pub_state) = syphon_state.0.lock() {
+        pub_state.active = active;
+    }
+    if let Ok(mut n_state) = ndi_state.0.lock() {
+        n_state.active = active;
+    }
     log::info!("[BENDR Publisher] Active: {}", active);
     Ok(())
 }
 
-/// Receive a raw RGBA frame from JS and publish it via Syphon/Spout.
+/// Receive a raw RGBA frame from JS and publish it via Syphon/Spout and NDI.
 ///
-/// Uses std::sync::Mutex to hold the publisher briefly during
-/// the Metal texture upload + Syphon publish call.
+/// Uses std::sync::Mutex to hold the publishers briefly during transmission.
 #[tauri::command]
-pub fn publish_frame(state: tauri::State<'_, crate::syphon::PublisherState>, width: u32, height: u32, pixels: Vec<u8>) -> Result<(), String> {
-    let mut pub_state = state.0.lock().unwrap();
-    if pub_state.active {
-        pub_state.publish_frame(width, height, &pixels);
+pub fn publish_frame(
+    syphon_state: tauri::State<'_, crate::syphon::PublisherState>,
+    ndi_state: tauri::State<'_, crate::ndi::NdiState>,
+    width: u32,
+    height: u32,
+    pixels: Vec<u8>,
+) -> Result<(), String> {
+    if let Ok(mut pub_state) = syphon_state.0.lock() {
+        if pub_state.active {
+            pub_state.publish_frame(width, height, &pixels);
+        }
+    }
+    if let Ok(mut n_state) = ndi_state.0.lock() {
+        if n_state.active {
+            n_state.publish_frame(width, height, &pixels);
+        }
     }
     Ok(())
 }

@@ -13,6 +13,7 @@ pub fn run() {
 
     tauri::Builder::default()
         .manage(syphon::PublisherState(std::sync::Mutex::new(syphon::FramePublisher::new())))
+        .manage(ndi::NdiState(std::sync::Mutex::new(ndi::NdiService::new())))
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
             commands::midi_scan_ports,
