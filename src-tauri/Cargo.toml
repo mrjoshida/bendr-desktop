@@ -29,6 +29,8 @@ mdns-sd = "0.11"
 rtpmidi = { version = "0.4.4", features = ["mdns"] }
 midi-types = "0.2"
 rosc = "0.11.4"
+ndi-sdk = "0.2.0"
+libloading = "0.9.0"
 
 # Phase 2: OSC (commented out until needed)
 # rosc = "0.10"
