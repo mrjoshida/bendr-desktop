@@ -327,6 +327,64 @@ if (window.__TAURI_INTERNALS__) {
   console.log('[BENDR Desktop] Bridge ready');
 }
 
+// ── File Picker Interceptor ──────────────────────────────
+// In Tauri WKWebView, <input type="file"> can fail to open or 
+// return Blob URLs that fail to play due to sandbox restrictions.
+// We intercept all programmatic .click() calls on file inputs 
+// and reroute them to Tauri's native dialog plugin.
+if (window.__TAURI_INTERNALS__) {
+  const origClick = HTMLInputElement.prototype.click;
+  HTMLInputElement.prototype.click = async function() {
+    if (this.type === 'file') {
+      try {
+        const invoke = window.__TAURI_INTERNALS__.invoke;
+        const res = await invoke('plugin:dialog|open', {
+          multiple: !!this.multiple
+        });
+        
+        if (!res) return; // user cancelled
+        
+        const paths = Array.isArray(res) ? res : [res];
+        const fakeFiles = paths.map(filePath => {
+          // Tauri v2 asset protocol
+          const assetUrl = `asset://localhost/${encodeURIComponent(filePath)}`;
+          const filename = filePath.split('/').pop() || filePath.split('\\').pop();
+          
+          return {
+            name: filename,
+            type: '', // let bendr infer from extension
+            __isTauriAsset: true,
+            assetUrl: assetUrl,
+            text: () => fetch(assetUrl).then(r => r.text()),
+            arrayBuffer: () => fetch(assetUrl).then(r => r.arrayBuffer())
+          };
+        });
+        
+        // Override the files property for this specific input
+        Object.defineProperty(this, 'files', { get: () => fakeFiles, configurable: true });
+        
+        // Fire the change event so bendr handles it
+        if (typeof this.onchange === 'function') {
+          this.onchange({ target: this });
+        }
+        return;
+      } catch (e) {
+        console.error('[BENDR Desktop] Native dialog failed, falling back to browser picker', e);
+      }
+    }
+    return origClick.call(this);
+  };
+
+  // Intercept URL.createObjectURL to return the native asset:// URL
+  const origCreateObjectURL = URL.createObjectURL;
+  URL.createObjectURL = (obj) => {
+    if (obj && obj.__isTauriAsset) {
+      return obj.assetUrl;
+    }
+    return origCreateObjectURL(obj);
+  };
+}
+
 // ── Syphon & Spout Publisher Bridge ──────────────────────
 // Transmits the WebGL frame to Rust for native sharing.
 

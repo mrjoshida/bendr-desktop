@@ -12,7 +12,11 @@ pub fn run() {
     let _ = env_logger::try_init();
 
     tauri::Builder::default()
-        .manage(syphon::PublisherState(std::sync::Mutex::new(syphon::FramePublisher::new())))
+        .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_dialog::init())
+        .manage(syphon::PublisherState(std::sync::Mutex::new(
+            syphon::FramePublisher::new(),
+        )))
         .manage(ndi::NdiState(std::sync::Mutex::new(ndi::NdiService::new())))
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
@@ -31,8 +35,10 @@ pub fn run() {
             let app_handle = app.handle().clone();
 
             // Initialize MIDI service
-            let midi_service = midi::init(app_handle.clone())
-                .map_err(|e| Box::new(std::io::Error::new(std::io::ErrorKind::Other, e)) as Box<dyn std::error::Error>)?;
+            let midi_service = midi::init(app_handle.clone()).map_err(|e| {
+                Box::new(std::io::Error::new(std::io::ErrorKind::Other, e))
+                    as Box<dyn std::error::Error>
+            })?;
 
             // Register MIDI service in managed state for command handlers
             app.manage(tokio::sync::Mutex::new(midi_service));
