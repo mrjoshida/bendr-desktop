@@ -339,7 +339,7 @@ if (window.__TAURI_INTERNALS__) {
       try {
         const invoke = window.__TAURI_INTERNALS__.invoke;
         const res = await invoke('plugin:dialog|open', {
-          multiple: !!this.multiple
+          options: { multiple: !!this.multiple }
         });
         
         if (!res) return; // user cancelled
