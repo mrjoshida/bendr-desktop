@@ -12,6 +12,10 @@
     "core:window:allow-create",
     "core:window:allow-set-fullscreen",
     "dialog:default",
-    "fs:default"
+    "fs:default",
+    {
+      "identifier": "fs:allow-read",
+      "allow": [{ "path": "**" }]
+    }
   ]
 }

@@ -347,7 +347,7 @@ if (window.__TAURI_INTERNALS__) {
         const paths = Array.isArray(res) ? res : [res];
         const fakeFiles = paths.map(filePath => {
           // Tauri v2 asset protocol
-          const assetUrl = `asset://localhost/${encodeURIComponent(filePath)}`;
+          const assetUrl = `asset://localhost${filePath.split('/').map(encodeURIComponent).join('/')}`;
           const filename = filePath.split('/').pop() || filePath.split('\\').pop();
           
           return {
