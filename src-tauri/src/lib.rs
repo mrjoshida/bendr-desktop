@@ -12,6 +12,7 @@ pub fn run() {
     let _ = env_logger::try_init();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_wdio_webdriver::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(syphon::PublisherState(std::sync::Mutex::new(
@@ -30,6 +31,7 @@ pub fn run() {
             commands::is_output_open,
             commands::toggle_publisher,
             commands::publish_frame,
+            commands::pick_file,
         ])
         .setup(|app| {
             let app_handle = app.handle().clone();

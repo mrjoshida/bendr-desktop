@@ -128,3 +128,30 @@ pub fn publish_frame(
     }
     Ok(())
 }
+
+use tauri_plugin_dialog::DialogExt;
+
+#[tauri::command]
+pub async fn pick_file(app: tauri::AppHandle, multiple: bool) -> Result<Vec<String>, String> {
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    
+    if multiple {
+        app.dialog().file().pick_files(move |paths| {
+            let res = match paths {
+                Some(p) => p.into_iter().map(|f| f.into_path().unwrap().to_string_lossy().to_string()).collect(),
+                None => vec![],
+            };
+            let _ = tx.send(res);
+        });
+    } else {
+        app.dialog().file().pick_file(move |path| {
+            let res = match path {
+                Some(p) => vec![p.into_path().unwrap().to_string_lossy().to_string()],
+                None => vec![],
+            };
+            let _ = tx.send(res);
+        });
+    }
+    
+    rx.await.map_err(|e| e.to_string())
+}

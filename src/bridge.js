@@ -338,11 +338,11 @@ if (window.__TAURI_INTERNALS__) {
     if (this.type === 'file') {
       try {
         const invoke = window.__TAURI_INTERNALS__.invoke;
-        const res = await invoke('plugin:dialog|open', {
-          options: { multiple: !!this.multiple }
+        const res = await invoke('pick_file', {
+          multiple: !!this.multiple
         });
         
-        if (!res) return; // user cancelled
+        if (!res || res.length === 0) return; // user cancelled
         
         const paths = Array.isArray(res) ? res : [res];
         const fakeFiles = paths.map(filePath => {
