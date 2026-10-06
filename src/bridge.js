@@ -346,13 +346,20 @@ if (window.__TAURI_INTERNALS__) {
         
         const paths = Array.isArray(res) ? res : [res];
         const fakeFiles = paths.map(filePath => {
-          // Tauri v2 asset protocol
           const assetUrl = `asset://localhost${filePath.split('/').map(encodeURIComponent).join('/')}`;
           const filename = filePath.split('/').pop() || filePath.split('\\').pop();
           
+          let type = '';
+          const ext = filename.split('.').pop().toLowerCase();
+          if (['mp4', 'webm', 'mov', 'mkv', 'avi', 'm4v'].includes(ext)) type = 'video/' + ext;
+          else if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'].includes(ext)) type = 'image/' + ext;
+          else if (['json'].includes(ext)) type = 'application/json';
+          else if (['mp3', 'wav', 'ogg', 'flac', 'aac'].includes(ext)) type = 'audio/' + ext;
+
           return {
             name: filename,
-            type: '', // let bendr infer from extension
+            type: type,
+            size: 1048576, // 1MB mock size so toFixed doesn't evaluate to NaN
             __isTauriAsset: true,
             assetUrl: assetUrl,
             text: () => fetch(assetUrl).then(r => r.text()),
@@ -360,17 +367,17 @@ if (window.__TAURI_INTERNALS__) {
           };
         });
         
-        // Override the files property for this specific input
         Object.defineProperty(this, 'files', { get: () => fakeFiles, configurable: true });
-        
-        // Fire the change event so bendr handles it
-        if (typeof this.onchange === 'function') {
-          this.onchange({ target: this });
-        }
-        return;
       } catch (e) {
         console.error('[BENDR Desktop] Native dialog failed, falling back to browser picker', e);
+        return origClick.call(this);
       }
+
+      // Fire the change event outside try/catch so bendr errors don't trigger the fallback!
+      if (typeof this.onchange === 'function') {
+        this.onchange({ target: this });
+      }
+      return;
     }
     return origClick.call(this);
   };
